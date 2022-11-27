@@ -8,7 +8,11 @@ public class GameManager : MonoBehaviour
     [Header("GameObject")]
     public GameObject go;
     [SerializeField]
+    Vector3 initPosCam;
+    [SerializeField]
     GameObject initPosCreate;
+    [SerializeField]
+    GameObject camHolder;
     public Camera cam;
 
     [Header("Otros Scripts")]
@@ -23,10 +27,14 @@ public class GameManager : MonoBehaviour
     [SerializeField]
     GameObject canvasCreate;
 
+    [Header("Variables de Suavizado-Control")]
+    [SerializeField]
+    float smoothDrag;
 
     [Header("Eliseo")]
     [SerializeField]
     Vector3 initPos;
+
     public enum SelectorState
     {
         Waiting,
@@ -88,8 +96,8 @@ public class GameManager : MonoBehaviour
         currentState = SelectorState.DragCamera;
         ActiveCanvas(canvasMessage);
         DesactiveCanvas(canvasActions);
-        
-        go = cam.gameObject;
+
+        go = camHolder;
 
         if (Input.GetMouseButtonUp(0))
         {
@@ -101,21 +109,46 @@ public class GameManager : MonoBehaviour
         Vector3 defPos = Input.mousePosition;
         Vector3 goDefPos = go.transform.position;
 
-        if (Input.GetMouseButton(0))
+        //Al clicar
+        if (Input.GetMouseButtonDown(0))
         {
-            /*Vector3 curMousePos = Input.mousePosition;
-            Vector3 desiredPos = new Vector3 (camDefPos.x - curMousePos.x, camDefPos.y, camDefPos.z - curMousePos.y);*/
-            Vector3 curMousePos = new Vector3(Input.GetAxis("Mouse X"), 0f, Input.GetAxis("Mouse Y"));
-            Vector3 desiredPos = goDefPos + curMousePos;
+            //Almacenamos la posición del puntero
+            initPosCam = Input.mousePosition;
+        }//Al mantener pulsado
+        else if (Input.GetMouseButton(0))
+        {
+            //Almnacenamos la posición inicial del puntero menos la posición actual del puntero
+            Vector3 delta = initPosCam - Input.mousePosition;
 
-            go.transform.position = desiredPos;
+            //Crearemos otro Vector3 con la posición de delta en X e Y
+            Vector3 deltaPos = new Vector3(delta.x, 0f, delta.y);
+            go.transform.position += deltaPos * smoothDrag;
 
+            initPosCam = Input.mousePosition;
         }
         else if (Input.GetMouseButtonUp(0))
         {
             currentState = SelectorState.Waiting;
             CancelAction();
-        }            
+        }
+        
+        if (Input.GetMouseButton(1))
+        {
+            //Almnacenamos la rotación inicial del puntero menos la posición actual del puntero
+            Quaternion delta = go.transform.rotation;
+
+            Quaternion deltaRot = new Quaternion();
+            deltaRot.Set(go.transform.rotation.x, (go.transform.rotation.y * Input.GetAxis("Mouse X") * 45f), go.transform.rotation.z, .5f);
+
+            go.transform.Rotate(new Vector3(0f, deltaRot.y, 0f));
+            //go.transform.rotation = deltaRot;
+
+        }//Al dejar de hacer click
+        else if (Input.GetMouseButtonUp(1))
+        {
+            currentState = SelectorState.Waiting;
+            CancelAction();
+        }         
     }
 
     /// <summary>
@@ -157,6 +190,21 @@ public class GameManager : MonoBehaviour
     {
         Vector3 initPos = new Vector3(0f, prefab.transform.localScale.y / 2f, 0f);
         go = Instantiate(prefab, initPosCreate.transform.position + initPos, Quaternion.identity);
+
+        /*Ray ray;
+        ray = cam.ScreenPointToRay(Input.mousePosition);
+        RaycastHit hitInfo;
+
+        if(Physics.Raycast(ray,out hitInfo))
+        {
+            if(hitInfo.collider.tag == "Ground")
+            {
+                Vector3 initPos = new Vector3(hitInfo.point.x, prefab.transform.localScale.y / 2f, hitInfo.point.y);
+                //Vector3 initPos = new Vector3(0f, prefab.transform.localScale.y / 2f, 0f) + new Vector3(hitInfo.point.x, 0f, hitInfo.point.y);
+                go = Instantiate(prefab, Vector3.zero + initPosCreate.transform.position + initPos, Quaternion.identity);
+            }
+        }
+*/
 
         currentState = SelectorState.WaitingDrag;
     }
